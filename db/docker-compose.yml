@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: jobfinderai-db-2025
+    environment:
+      POSTGRES_DB: jobfinderai
+      POSTGRES_USER: jobfinderai-user
+      POSTGRES_PASSWORD: jobfinderai-pwd
+    ports:
+      - "5432:5432"
+    volumes:
+      - jobfinderai_pgdata_2025:/var/lib/postgresql/data
+
+volumes:
+  jobfinderai_pgdata_2025:
