@@ -2,11 +2,13 @@ package gr.kipouralkis.backend.service;
 
 import gr.kipouralkis.backend.model.Job;
 import gr.kipouralkis.backend.model.JobChunk;
+import gr.kipouralkis.backend.repository.JobChunkJdbcRepository;
 import gr.kipouralkis.backend.repository.JobChunkRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Service responsible for indexing Job entities for semantic search.
@@ -26,29 +28,42 @@ public class JobIndexService {
 
     private final JobChunkRepository jobChunkRepository;
     private final EmbeddingApiService embeddingApiService;
+    private final JobChunkJdbcRepository jobChunkJdbcRepository;
 
     public JobIndexService(JobChunkRepository jobChunkRepository,
-                           EmbeddingApiService embeddingApiService) {
+                           EmbeddingApiService embeddingApiService,
+                           JobChunkJdbcRepository jobChunkJdbcRepository) {
         this.jobChunkRepository = jobChunkRepository;
         this.embeddingApiService = embeddingApiService;
+        this.jobChunkJdbcRepository = jobChunkJdbcRepository;
     }
 
     public void indexJob(Job job){
 
         List<String> jobChunks = splitIntoChunks(job.getDescription());
 
-        for(String jobChunk : jobChunks){
+        int index = 0;
+
+        for (String jobChunk : jobChunks) {
 
             float[] embedding = embeddingApiService.embed(jobChunk);
+            UUID uuid = UUID.randomUUID();
 
             JobChunk jc = new JobChunk();
             jc.setJob(job);
+            jc.setChunkIndex(index++);
             jc.setChunkContent(jobChunk);
             jc.setEmbedding(embedding);
 
-            jobChunkRepository.save(jc);
+            // Use JDBC for vector insert
+            jobChunkJdbcRepository.insertJobChunk(
+                    uuid,
+                    job.getId(),
+                    jc.getChunkIndex(),
+                    jc.getChunkContent(),
+                    jc.getEmbedding()
+            );
         }
-
     }
 
     private List<String> splitIntoChunks(String text){

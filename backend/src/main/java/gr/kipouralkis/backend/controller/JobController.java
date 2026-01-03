@@ -3,6 +3,7 @@ package gr.kipouralkis.backend.controller;
 import gr.kipouralkis.backend.dto.JobCreateRequest;
 import gr.kipouralkis.backend.model.Job;
 import gr.kipouralkis.backend.repository.JobRepository;
+import gr.kipouralkis.backend.service.JobIndexService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,9 +15,11 @@ import java.util.UUID;
 public class JobController {
 
     private final JobRepository jobRepository;
+    private final JobIndexService jobIndexService;
 
-    public JobController(JobRepository jobRepository) {
+    public JobController(JobRepository jobRepository, JobIndexService jobIndexService) {
         this.jobRepository = jobRepository;
+        this.jobIndexService = jobIndexService;
     }
 
     // list all jobs
@@ -68,6 +71,21 @@ public class JobController {
         }
         jobRepository.deleteById(id);
         return ResponseEntity.ok().build();
+    }
+
+    /*
+        INDEXING
+    */
+
+    @PostMapping("/{id}/index")
+    public ResponseEntity<?> indexJob(@PathVariable UUID id) {
+        System.out.println(">>> INDEX ENDPOINT HIT <<<");
+        return jobRepository.findById(id)
+                .map(job -> {
+                    jobIndexService.indexJob(job);
+                    return ResponseEntity.ok().build();
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
 }

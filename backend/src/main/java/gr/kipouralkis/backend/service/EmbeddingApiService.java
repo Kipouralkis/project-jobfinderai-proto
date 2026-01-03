@@ -2,13 +2,13 @@ package gr.kipouralkis.backend.service;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.http.converter.cbor.MappingJackson2CborHttpMessageConverter;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * Low-level service for generating vector embeddings from text.
@@ -26,46 +26,47 @@ public class EmbeddingApiService {
     @Value("${embedding.api.key}")
     private String apiKey;
 
-    @Value("${embedding.api.model}")
-    private String model;
+    private final RestTemplate restTemplate;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    public EmbeddingApiService() {
+        this.restTemplate = new RestTemplate();
+
+        // Remove CBOR converter (not needed)
+        restTemplate.getMessageConverters()
+                .removeIf(c -> c instanceof MappingJackson2CborHttpMessageConverter);
+
+        // Ensure JSON converter is present
+        restTemplate.getMessageConverters()
+                .add(new MappingJackson2HttpMessageConverter());
+    }
 
     public float[] embed(String text){
 
-        //build request body
         Map<String, Object> requestBody = Map.of(
-                "model", model,
-                "input", text
+                "inputs", text
         );
 
-        // build headers
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(apiKey);
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
 
-        // Send request
-        ResponseEntity<Map> response = restTemplate.exchange(
+        // Expects a JSON array [0.1, 0.2, 0.3, ...]
+        ResponseEntity<List> response = restTemplate.exchange(
                 apiUrl,
                 HttpMethod.POST,
                 request,
-                Map.class
+                List.class
         );
 
-        // Extract embedding
-        Map<String,Object> body = response.getBody();
-        if(body == null || !body.containsKey("data")) {
-            throw new IllegalStateException("Invalid embedding API response");
+        List<Double> embeddingList = response.getBody();
+        if(embeddingList == null || embeddingList.isEmpty()) {
+            throw new IllegalStateException("Embedding API returned empty list");
         }
 
-        List<Map<String, Object>> data = (List<Map<String, Object>>) body.get("data");
-        Map<String, Object> first = data.get(0);
 
-        List<Double> embeddingList = (List<Double>) first.get("embedding");
-
-        // Convert List<Double to float[]
         float[] vector = new float[embeddingList.size()];
         for (int i = 0; i < embeddingList.size(); i++) {
             vector[i] = embeddingList.get(i).floatValue();
@@ -73,5 +74,4 @@ public class EmbeddingApiService {
 
         return vector;
     }
-
 }

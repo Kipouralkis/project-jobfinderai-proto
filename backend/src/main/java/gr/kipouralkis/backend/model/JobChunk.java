@@ -1,5 +1,7 @@
 package gr.kipouralkis.backend.model;
 
+import com.pgvector.PGvector;
+import gr.kipouralkis.backend.converter.FloatArrayToVectorConverter;
 import jakarta.persistence.*;
 import org.hibernate.annotations.Array;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -32,10 +34,19 @@ public class JobChunk {
     @Column(columnDefinition = "TEXT")
     private String chunkContent;
 
-    @JdbcTypeCode(SqlTypes.OTHER)
-    @Column(columnDefinition = "vector(1024)")
+//    @Column(columnDefinition = "vector(1024)", insertable = false, updatable = false)
+    @Transient
     private float[] embedding;
 
+
+//    @JdbcTypeCode(SqlTypes.OTHER)
+//    @Column(columnDefinition = "vector(1024)")
+//    @Convert(converter = FloatArrayToVectorConverter.class)
+//    private float[] embedding;
+
+//    @Type(value = PGvector.class)
+//    @Column(columnDefinition = "vector(1024)")
+//    private float[] embedding;
 
     public UUID getId() {
         return id;
