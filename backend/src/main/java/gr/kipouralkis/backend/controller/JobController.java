@@ -4,6 +4,7 @@ import gr.kipouralkis.backend.dto.JobCreateRequest;
 import gr.kipouralkis.backend.model.Job;
 import gr.kipouralkis.backend.repository.JobRepository;
 import gr.kipouralkis.backend.service.JobIndexService;
+import gr.kipouralkis.backend.service.JobSearchService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,10 +17,12 @@ public class JobController {
 
     private final JobRepository jobRepository;
     private final JobIndexService jobIndexService;
+    private final JobSearchService jobSearchService;
 
-    public JobController(JobRepository jobRepository, JobIndexService jobIndexService) {
+    public JobController(JobRepository jobRepository, JobIndexService jobIndexService,  JobSearchService jobSearchService) {
         this.jobRepository = jobRepository;
         this.jobIndexService = jobIndexService;
+        this.jobSearchService = jobSearchService;
     }
 
     // list all jobs
@@ -46,6 +49,7 @@ public class JobController {
         job.setSeniority(request.getSeniority());
         job.setDescription(request.getDescription());
         Job savedJob = jobRepository.save(job);
+        jobIndexService.indexJob(savedJob);
         return ResponseEntity.ok(savedJob);
     }
 
@@ -73,19 +77,25 @@ public class JobController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping("/search")
+    public List<Job> search(@RequestParam String q) {
+        return jobSearchService.searchJobs(q);
+    }
+
+
     /*
         INDEXING
     */
 
-    @PostMapping("/{id}/index")
-    public ResponseEntity<?> indexJob(@PathVariable UUID id) {
-        System.out.println(">>> INDEX ENDPOINT HIT <<<");
-        return jobRepository.findById(id)
-                .map(job -> {
-                    jobIndexService.indexJob(job);
-                    return ResponseEntity.ok().build();
-                })
-                .orElse(ResponseEntity.notFound().build());
-    }
+//    @PostMapping("/{id}/index")
+//    public ResponseEntity<?> indexJob(@PathVariable UUID id) {
+//        System.out.println(">>> INDEX ENDPOINT HIT <<<");
+//        return jobRepository.findById(id)
+//                .map(job -> {
+//                    jobIndexService.indexJob(job);
+//                    return ResponseEntity.ok().build();
+//                })
+//                .orElse(ResponseEntity.notFound().build());
+//    }
 
 }
