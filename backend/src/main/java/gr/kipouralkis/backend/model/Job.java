@@ -30,6 +30,9 @@ public class Job {
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
+    @Transient
+    private Double rerankScore;
+
 
     public String getTitle() {
         return title;
@@ -78,4 +81,13 @@ public class Job {
     public UUID getId() {
         return id;
     }
+
+    public Double getRerankScore() {
+        return rerankScore;
+    }
+
+    public void setRerankScore(Double reRankScore) {
+        this.rerankScore = reRankScore;
+    }
+
 }
