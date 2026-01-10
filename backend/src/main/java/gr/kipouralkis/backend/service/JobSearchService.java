@@ -6,10 +6,7 @@ import gr.kipouralkis.backend.repository.JobChunkJdbcRepository;
 import gr.kipouralkis.backend.repository.JobRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,6 +36,9 @@ public class JobSearchService {
         // 1) Embedding
         long eStart = System.currentTimeMillis();
         float[] embedding = embeddingApiService.embed(query);
+
+        System.out.println("Embedding hash(query): " + Arrays.hashCode(embedding));
+
         long eEnd = System.currentTimeMillis();
 
         // 2) Vector search
@@ -68,6 +68,13 @@ public class JobSearchService {
 
         long total = System.currentTimeMillis() - t0;
 
+        System.out.println("=== VECTOR SEARCH RESULTS ===");
+        for (JobChunkSearchResult c : chunks) {
+            System.out.println("job=" + c.jobId() + "  distance=" + c.distance());
+        }
+        System.out.println("=============================");
+
+
         // JSON log
         System.out.println("""
         {
@@ -91,7 +98,9 @@ public class JobSearchService {
                 )
         );
 
-        return rerankJobs(query, jobs);
+//        return rerankJobs(query, jobs);
+
+        return jobs;
     }
 
     public List<Job> rerankJobs(String query, List<Job> jobs) {
@@ -134,9 +143,11 @@ public class JobSearchService {
 
 
         // Sort the fresh list
-        ranked.sort((a, b) -> Double.compare(b.getRerankScore(), a.getRerankScore()));
+//        ranked.sort((a, b) -> Double.compare(b.getRerankScore(), a.getRerankScore()));
 
-        return ranked;
+//        return ranked;
+
+        return jobs;
     }
 
 

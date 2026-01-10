@@ -40,7 +40,14 @@ public class JobIndexService {
 
     public void indexJob(Job job){
 
-        List<String> jobChunks = splitIntoChunks(job.getDescription());
+        String fullText = job.getTitle() + "\n" +
+                job.getSeniority() + "\n" +
+                job.getLocation() + "\n" +
+                job.getCompany() + "\n\n" +
+                job.getDescription();
+
+        List<String> jobChunks = splitIntoChunks(fullText);
+
 
         int index = 0;
 

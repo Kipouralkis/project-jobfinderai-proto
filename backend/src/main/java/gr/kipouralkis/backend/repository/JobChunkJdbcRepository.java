@@ -2,6 +2,7 @@ package gr.kipouralkis.backend.repository;
 
 import gr.kipouralkis.backend.converter.FloatArrayToVectorConverter;
 import gr.kipouralkis.backend.dto.JobChunkSearchResult;
+import org.postgresql.util.PGobject;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -43,6 +44,25 @@ public class JobChunkJdbcRepository {
         return sb.toString();
     }
 
+    private PGobject toPgVector(float[] embedding) {
+        try {
+            PGobject obj = new PGobject();
+            obj.setType("vector");
+
+            StringBuilder sb = new StringBuilder("[");
+            for (int i = 0; i < embedding.length; i++) {
+                if (i > 0) sb.append(",");
+                sb.append(embedding[i]);
+            }
+            sb.append("]");
+
+            obj.setValue(sb.toString());
+            return obj;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public List<JobChunkSearchResult> searchChunks(float[] queryEmbedding, int topK) {
 
         String sql = """
@@ -55,7 +75,7 @@ public class JobChunkJdbcRepository {
 
         return jdbcTemplate.query(
                 sql,
-                new Object[]{ vectorLiteral(queryEmbedding), topK },
+                new Object[]{ toPgVector(queryEmbedding), topK },
                 (rs, rowNum) -> new JobChunkSearchResult(
                         UUID.fromString(rs.getString("job_id")),
                         rs.getString("chunk_content"),

@@ -1,12 +1,14 @@
 package gr.kipouralkis.backend.service;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.*;
 import org.springframework.http.converter.cbor.MappingJackson2CborHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -20,56 +22,74 @@ import java.util.Map;
 @Service
 public class EmbeddingApiService {
 
-    @Value("${embedding.api.url}")
-    private String apiUrl;
-
-    @Value("${embedding.api.key}")
-    private String apiKey;
-
     private final RestTemplate restTemplate;
+    private final String apiKey;
+    private final String apiUrl;
 
-    public EmbeddingApiService() {
-        this.restTemplate = new RestTemplate();
-
-        // Remove CBOR converter (not needed)
-        restTemplate.getMessageConverters()
-                .removeIf(c -> c instanceof MappingJackson2CborHttpMessageConverter);
-
-        // Ensure JSON converter is present
-        restTemplate.getMessageConverters()
-                .add(new MappingJackson2HttpMessageConverter());
+    public EmbeddingApiService(
+            RestTemplateBuilder builder,
+            @Value("${embedding.api.key}") String apiKey,
+            @Value("${embedding.api.url}") String apiUrl
+    ) {
+        this.restTemplate = builder.build();
+        this.apiKey = apiKey;
+        this.apiUrl = apiUrl;
     }
 
-    public float[] embed(String text){
+    public float[] embed(String text) {
 
-        Map<String, Object> requestBody = Map.of(
-                "inputs", text
-        );
+        // Build request body
+        Map<String, Object> request = new HashMap<>();
+        request.put("model", "models/gemini-embedding-001");
 
+        Map<String, Object> content = new HashMap<>();
+        Map<String, Object> part = new HashMap<>();
+        part.put("text", text);
+        content.put("parts", List.of(part));
+
+        request.put("content", content);
+        request.put("outputDimensionality", 768);
+
+        // Headers
         HttpHeaders headers = new HttpHeaders();
+        headers.set("x-goog-api-key", apiKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(apiKey);
-        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
 
-        // Expects a JSON array [0.1, 0.2, 0.3, ...]
-        ResponseEntity<List> response = restTemplate.exchange(
+        // Call Gemini
+        ResponseEntity<Map> response = restTemplate.exchange(
                 apiUrl,
                 HttpMethod.POST,
-                request,
-                List.class
+                entity,
+                Map.class
         );
 
-        List<Double> embeddingList = response.getBody();
-        if(embeddingList == null || embeddingList.isEmpty()) {
-            throw new IllegalStateException("Embedding API returned empty list");
+        Map<String, Object> body = response.getBody();
+        if (body == null) {
+            throw new RuntimeException("Gemini returned null response");
         }
 
+        // Error handling
+        if (body.containsKey("error")) {
+            throw new RuntimeException("Gemini error: " + body.get("error"));
+        }
 
-        float[] vector = new float[embeddingList.size()];
-        for (int i = 0; i < embeddingList.size(); i++) {
-            vector[i] = embeddingList.get(i).floatValue();
+        // Extract embedding
+        Map<String, Object> embedding = (Map<String, Object>) body.get("embedding");
+        if (embedding == null) {
+            throw new RuntimeException("Gemini returned no embedding: " + body);
+        }
+
+        List<Double> values = (List<Double>) embedding.get("values");
+        if (values == null) {
+            throw new RuntimeException("Gemini embedding missing 'value': " + body);
+        }
+
+        // Convert to float[]
+        float[] vector = new float[values.size()];
+        for (int i = 0; i < values.size(); i++) {
+            vector[i] = values.get(i).floatValue();
         }
 
         return vector;
