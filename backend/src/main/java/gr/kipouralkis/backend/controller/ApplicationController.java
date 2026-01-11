@@ -41,6 +41,11 @@ public class ApplicationController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/user/{userId}")
+    public List<Application> getApplicationsForUser(@PathVariable UUID userId) {
+        return applicationRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    }
+
     @PostMapping
     public ResponseEntity<Application> createApplication(@RequestBody ApplicationCreateRequest request) {
 

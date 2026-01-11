@@ -1,13 +1,11 @@
 package gr.kipouralkis.backend.repository;
 
 import gr.kipouralkis.backend.model.Application;
+import gr.kipouralkis.backend.model.FileRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.List;
+import java.io.File;
 import java.util.UUID;
 
-public interface ApplicationRepository extends JpaRepository<Application, UUID> {
-
-    List<Application> findByUserIdOrderByCreatedAtDesc(UUID userId);
-
+public interface FileRepository extends JpaRepository<FileRecord, UUID> {
 }
