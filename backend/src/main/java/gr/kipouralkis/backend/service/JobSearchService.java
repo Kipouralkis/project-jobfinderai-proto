@@ -57,12 +57,13 @@ public class JobSearchService {
                         ));
         long gEnd = System.currentTimeMillis();
 
-        // 4) DB fetch
+        // 4) DB fetch + truncate
         long fStart = System.currentTimeMillis();
         List<Job> jobs = bestPerJob.keySet().stream()
                 .map(jobRepository::findById)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
+                .limit(5)
                 .collect(Collectors.toList());
         long fEnd = System.currentTimeMillis();
 
@@ -98,57 +99,29 @@ public class JobSearchService {
                 )
         );
 
-//        return rerankJobs(query, jobs);
+        return rerankingService.rerankJobs(query, jobs);
 
-        return jobs;
     }
 
-    public List<Job> rerankJobs(String query, List<Job> jobs) {
+//    public List<Job> rerankJobs(String query, List<Job> jobs) {
+//
+//        if (jobs.isEmpty()) {
+//            return jobs;
+//        }
+//
+//        // Score each job with the LLM
+//        for (Job job : jobs) {
+//            double score = rerankingService.score(query, job);
+//            job.setRerankScore(score);
+//        }
+//
+//        // Sort by score descending
+//        jobs.sort((a, b) -> Double.compare(b.getRerankScore(), a.getRerankScore()));
+//
+//        // Return top 10 (or fewer)
+//        return jobs.subList(0, Math.min(10, jobs.size()));
+//    }
 
-        if (jobs.isEmpty()) {
-            return jobs;
-        }
-
-        // Make a fresh mutable copy to avoid JPA proxy weirdness
-        List<Job> ranked = jobs.stream()
-                .map(j -> j) // shallow copy of references
-                .collect(Collectors.toCollection(java.util.ArrayList::new));
-
-        // Extract documents
-        List<String> docs = ranked.stream()
-                .map(Job::getDescription)
-                .toList();
-
-        // Call reranker
-        List<Double> scores = rerankingService.rerank(query, docs);
-
-        // Attach scores
-        for (int i = 0; i < ranked.size(); i++) {
-            ranked.get(i).setRerankScore(scores.get(i));
-            System.out.println("Job Score: " + ranked.get(i).getRerankScore());
-        }
-
-        System.out.println("DOC COUNT = " + docs.size());
-        System.out.println("SCORE COUNT = " + scores.size());
-        System.out.println("SCORES = " + scores);
-
-        System.out.println("=== JOBS BEFORE SORT ===");
-        for (int i = 0; i < jobs.size(); i++) {
-            Job j = jobs.get(i);
-            System.out.println(i + " -> "
-                    + j.getId()
-                    + " / " + j.getTitle()
-                    + " / score=" + j.getRerankScore());
-        }
-
-
-        // Sort the fresh list
-//        ranked.sort((a, b) -> Double.compare(b.getRerankScore(), a.getRerankScore()));
-
-//        return ranked;
-
-        return jobs;
-    }
 
 
 }

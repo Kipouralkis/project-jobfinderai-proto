@@ -1,60 +1,108 @@
 package gr.kipouralkis.backend.service;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import gr.kipouralkis.backend.model.Job;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 
 @Service
 public class RerankingService {
 
-    @Value("${reranker.api.key}")
-    private String apiKey;
+    private final TextGenerationService llm;
+    private final ObjectMapper mapper =  new ObjectMapper();
+    private final Executor rerankExecutor;
 
-    @Value("${reranker.api.url}")
-    private String apiUrl;
+    public RerankingService(TextGenerationService llm, @Qualifier("rerankExecutor") Executor rerankExecutor) {
+        this.llm = llm;
+        this.rerankExecutor = rerankExecutor;
+    }
 
-    @Value("${reranker.api.model}")
-    private String apiModel;
-
-    private final RestTemplate restTemplate = new RestTemplate();
-
-    public List<Double> rerank(String query, List<String> documents) {
-
-        Map<String, Object> body = new HashMap<>();
-        body.put("model", apiModel);
-        body.put("query", query);
-        body.put("documents", documents);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(apiKey);
-
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-
-        ResponseEntity<Map<String, Object>> response =
-                restTemplate.exchange(apiUrl, HttpMethod.POST, request,
-                        new ParameterizedTypeReference<Map<String, Object>>() {});
-
-        Map<String, Object> responseBody = response.getBody();
-        if (responseBody == null || !responseBody.containsKey("data")) {
-            throw new IllegalStateException("VoyageAI returned no data: " + response);
+    public List<Job> rerankJobs(String query, List<Job> jobs) {
+        if (jobs == null || jobs.isEmpty()) {
+            return jobs;
         }
 
-        List<Map<String, Object>> data = (List<Map<String, Object>>) responseBody.get("data");
-
-        List<Double> scores = new ArrayList<>();
-        for (Map<String, Object> item : data) {
-            scores.add(((Number) item.get("relevance_score")).doubleValue());
+        // 1. Build a text representation of all jobs with temporary IDs
+        StringBuilder jobsBulletList = new StringBuilder();
+        for (int i = 0; i < jobs.size(); i++) {
+            Job job = jobs.get(i);
+            jobsBulletList.append("""
+                [ID: %d]
+                Title: %s
+                Company: %s
+                Description: %s
+                ---
+                """.formatted(i, job.getTitle(), job.getCompany(), job.getDescription()));
         }
 
-        return scores;
+        // 2. Create the Batch Prompt
+        String batchPrompt = """
+            You are an expert technical recruiter. Analyze the following list of jobs against the User Query.
+            
+            USER QUERY: "%s"
+            
+            INSTRUCTIONS:
+            1. Evaluate each job's relevance to the query (skills, seniority, field).
+            2. Provide a brief reasoning for each match.
+            3. Assign a relevance score between 0.0 and 1.0.
+            
+            Return ONLY a JSON object with a key "matches" which is an array of objects:
+            {
+              "matches": [
+                { "id": 0, "reasoning": "...", "score": 0.95 },
+                { "id": 1, "reasoning": "...", "score": 0.40 }
+              ]
+            }
+
+            JOBS TO ANALYZE:
+            %s
+            """.formatted(query, jobsBulletList.toString());
+
+        // 3. Single API Call (Quota Friendly!)
+        String result = llm.generateText(batchPrompt).trim();
+
+        // 4. Clean and Parse the JSON Array
+        int firstBracket = result.indexOf("{");
+        int lastBracket = result.lastIndexOf("}");
+        if (firstBracket != -1 && lastBracket != -1) {
+            result = result.substring(firstBracket, lastBracket + 1);
+        }
+
+        try {
+            JsonNode root = mapper.readTree(result);
+            JsonNode matches = root.path("matches");
+
+            for (JsonNode matchNode : matches) {
+                int id = matchNode.path("id").asInt(-1);
+                double score = matchNode.path("score").asDouble(0.0);
+                String reasoning = matchNode.path("reasoning").asText("No reasoning");
+
+                if (id >= 0 && id < jobs.size()) {
+                    Job job = jobs.get(id);
+                    job.setRerankScore(score);
+
+                    // Console log for your visibility
+                    System.out.println("\n--- BATCH RERANK LOG ---");
+                    System.out.println("ID: " + id + " | Job: " + job.getTitle());
+                    System.out.println("Score: " + score);
+                    System.out.println("Reasoning: " + reasoning);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to parse batch rerank JSON. Raw: " + result);
+        }
+
+        // 5. Sort the original list by the new scores
+        return jobs.stream()
+                .sorted(Comparator.comparingDouble(Job::getRerankScore).reversed())
+                .toList();
     }
 }
