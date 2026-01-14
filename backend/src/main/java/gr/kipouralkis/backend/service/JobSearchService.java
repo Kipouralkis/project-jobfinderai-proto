@@ -99,7 +99,8 @@ public class JobSearchService {
                 )
         );
 
-        return rerankingService.rerankJobs(query, jobs);
+//        return rerankingService.rerankJobs(query, jobs);
+        return jobs;
 
     }
 

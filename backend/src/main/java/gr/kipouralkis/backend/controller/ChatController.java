@@ -25,50 +25,22 @@ import java.util.Map;
 @RequestMapping("/chat")
 public class ChatController {
 
-    private final ChatService chatService;
-    private final JobSearchService jobSearchService;
-    private final TextGenerationService textGenerationService;
-    private final IntentService intentService;
+    private final AgentChatService agentChatService;
 
-    public ChatController(
-            ChatService chatService,
-            JobSearchService jobSearchService,
-            TextGenerationService textGenerationService,
-            IntentService intentService
-    ) {
-        this.chatService = chatService;
-        this.jobSearchService = jobSearchService;
-        this.textGenerationService = textGenerationService;
-        this.intentService = intentService;
+    // We only need the Agent Service now.
+    // The agent will internally use JobSearch and TextGen as needed.
+    public ChatController(AgentChatService agentChatService) {
+        this.agentChatService = agentChatService;
     }
 
-//    @PostMapping
-//    public ChatResponse chat(@RequestBody ChatRequest chatRequest) {
-//        String intent = intentService.classify(chatRequest.message());
-//        System.out.println("INTENT = " + intent);
-//        return chatService.respond(intent);
-//    }
-
+    /**
+     * The unified agent endpoint.
+     * No more switch(intent) logic! Gemini/OpenAI handles the routing
+     * automatically via Tool Calling.
+     */
     @PostMapping
-    public Object chat(@RequestBody ChatRequest req){
-        Intent intent =  intentService.classify(req.message());
-        System.out.println("INTENT = " + intent);
-
-        switch (intent){
-
-            case SEARCH_JOBS -> {
-                return jobSearchService.searchJobs(req.message());
-            }
-
-            case GENERAL_CHAT -> {
-                String answer = textGenerationService.generateText(req.message());
-                return Map.of("answer", answer);
-            }
-
-            default -> {
-                return Map.of("answer", "feature not implemented");
-            }
-        }
+    public ChatResponse chat(@RequestBody ChatRequest req) {
+        // This triggers the while-loop in your AgentChatService
+        return agentChatService.chat(req);
     }
-
 }

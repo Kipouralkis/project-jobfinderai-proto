@@ -9,23 +9,39 @@ export default function ChatPage() {
         if (!input.trim()) return;
 
         const userMsg = { role: "user", content: input };
+
+        // 1. Prepare the full history to send to the AI
+        // We include the current messages PLUS the one the user just typed
+        const historyPayload = [...messages, userMsg];
+
+        // 2. Update UI immediately for a responsive feel
         setMessages(prev => [...prev, userMsg]);
-
-        const res = await fetch("http://localhost:8081/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: input })
-        });
-
-        const data = await res.json();
-
-        const assistantMsg = {
-            role: "assistant",
-            content: data
-        };
-
-        setMessages(prev => [...prev, assistantMsg]);
+        const currentInput = input;
         setInput("");
+
+        try {
+            const res = await fetch("http://localhost:8081/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    message: currentInput,
+                    history: historyPayload // THIS IS THE KEY
+                })
+            });
+
+            const data = await res.json();
+
+            // 3. Add the AI's response (Text + Job Cards) to the UI
+            const assistantMsg = {
+                role: "assistant",
+                content: data.answer,
+                jobs: data.data || [],
+            };
+
+            setMessages(prev => [...prev, assistantMsg]);
+        } catch (error) {
+            console.error("Failed to connect to backend:", error);
+        }
     }
 
     return (
@@ -36,50 +52,48 @@ export default function ChatPage() {
                 {messages.map((msg, i) => {
                     const isUser = msg.role === "user";
 
-                    // 1) Job list → render cards
-                    if (Array.isArray(msg.content)) {
-                        return (
-                            <div key={i} style={{ alignSelf: "flex-start", width: "100%" }}>
-                                {msg.content.map(job => (
-                                    <ChatCard key={job.id} job={job} />
-                                ))}
-                            </div>
-                        );
-                    }
-
-                    // 2) Object with { answer } → render the answer text
-                    if (typeof msg.content === "object" && msg.content !== null) {
-                        return (
-                            <div
-                                key={i}
-                                style={{
-                                    ...styles.message,
-                                    alignSelf: "flex-start",
-                                    background: "#e5e5e5",
-                                    color: "black"
-                                }}
-                            >
-                                {msg.content.answer}
-                            </div>
-                        );
-                    }
-
-                    // 3) Normal text → render bubble
                     return (
-                        <div
-                            key={i}
-                            style={{
-                                ...styles.message,
-                                alignSelf: isUser ? "flex-end" : "flex-start",
-                                background: isUser ? "#4a6cf7" : "#e5e5e5",
-                                color: isUser ? "white" : "black"
-                            }}
-                        >
-                            {msg.content}
+                        <div key={i} style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: isUser ? "flex-end" : "flex-start",
+                            marginBottom: "20px",
+                            width: "100%"
+                        }}>
+                            {/* AI Text Bubble: Adds the "flavor" and personality */}
+                            {msg.content && (
+                                <div style={{
+                                    ...styles.message,
+                                    background: isUser ? "#4a6cf7" : "#f0f2f5",
+                                    color: isUser ? "white" : "#333",
+                                    borderRadius: "15px",
+                                    padding: "12px 16px",
+                                    maxWidth: "80%",
+                                    lineHeight: "1.5",
+                                    boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
+                                }}>
+                                    {msg.content}
+                                </div>
+                            )}
+
+                            {/* Structured Job Cards: The "functional" part of the response */}
+                            {msg.jobs && msg.jobs.length > 0 && (
+                                <div style={{
+                                    display: "grid",
+                                    gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+                                    gap: "12px",
+                                    width: "100%",
+                                    marginTop: "12px",
+                                    paddingLeft: isUser ? "0" : "10px"
+                                }}>
+                                    {msg.jobs.map(job => (
+                                        <ChatCard key={job.id} job={job} />
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     );
                 })}
-
 
             </div>
 

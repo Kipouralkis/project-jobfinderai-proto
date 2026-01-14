@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import SearchBar from "../components/SearchBar";
 import JobList from "../components/JobList";
 import { searchJobs } from "../api/jobs";
+import CandidateLayout from "../layouts/CandidateLayout";
 
 export default function Home() {
     const [jobs, setJobs] = useState([]);
@@ -12,10 +13,10 @@ export default function Home() {
     }
 
     return (
-        <div style={{ padding: "24px" }}>
+        <>
             <h1>Job Search</h1>
             <SearchBar onSearch={handleSearch} />
             <JobList jobs={jobs} />
-        </div>
+        </>
     );
 }
