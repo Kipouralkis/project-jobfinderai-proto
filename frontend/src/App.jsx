@@ -53,7 +53,7 @@ export default function App() {
         <BrowserRouter>
             <Routes>
                 {/* Public */}
-                <Route path="/" element={<Home />} />
+                <Route path="/" element={<Navigate to="/candidate" replace />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/search" element={<SearchResults />} />
                 <Route path="/jobs/:id" element={<JobDetails />} />
