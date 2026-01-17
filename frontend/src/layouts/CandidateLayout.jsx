@@ -1,10 +1,11 @@
-import CandidateNav from "../components/CandidateNav";
+import CandidateNav from "../components/candidate/CandidateNav.jsx";
+import "../index.css"
 
 export default function CandidateLayout({ children }) {
     return (
         <div>
             <CandidateNav />
-            <div style={{ padding: "24px" }}>
+            <div>
                 {children}
             </div>
         </div>

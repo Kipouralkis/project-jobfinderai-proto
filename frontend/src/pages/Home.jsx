@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import SearchBar from "../components/SearchBar";
-import JobList from "../components/JobList";
+import JobList from "../components/jobs/JobList.jsx";
 import { searchJobs } from "../api/jobs";
 import CandidateLayout from "../layouts/CandidateLayout";
 

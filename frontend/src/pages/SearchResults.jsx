@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import SearchBar from "../components/SearchBar";
-import JobList from "../components/JobList";
+import JobList from "../components/jobs/JobList.jsx";
 import { searchJobs } from "../api/jobs";
 
 export default function SearchResults() {

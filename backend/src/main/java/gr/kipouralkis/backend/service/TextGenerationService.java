@@ -26,6 +26,11 @@ import java.util.Map;
  *
  */
 
+/**
+ * Serves as the primary gateway to the LLM API.
+ * It is responsible for schema definition, JSON-to-Record mapping, and maintaining the
+ * integrity of the "Prompt-Inference-Parse" pipeline.
+ */
 @Service
 public class TextGenerationService {
 
@@ -49,9 +54,12 @@ public class TextGenerationService {
         this.model = model;
     }
 
+
     /**
-     * UNIFIED PIPELINE: Handles the full conversation history.
-     * This replaces sendChatMessage and sendToolResult.
+     * Handles the transformation of conversation history into
+     * an LLM-readable request and parses the subsequent response.
+     * @param history history The complete list of {@link Message} records for context.
+     * @return An {@link LlmResponse} containing the AI's content or tool calling intent.
      */
     public LlmResponse handleConversation(List<Message> history) {
         Map<String, Object> requestBody = new HashMap<>();
@@ -77,10 +85,8 @@ public class TextGenerationService {
         }
     }
 
-    /**
-     * LEGACY SUPPORT: Simple prompt-to-text.
-     * Keeps older parts of the app working while using the new logic.
-     */
+
+
     public String generateText(String prompt) {
         List<Message> simpleHistory = List.of(new Message("user", prompt, null, null));
         LlmResponse response = handleConversation(simpleHistory);
@@ -136,7 +142,10 @@ public class TextGenerationService {
                 "job_apply",
                 "Submit a job application for a specific job ID.",
                 Map.of(
-                        "job_id", Map.of("type", "string"),
+                        "job_id", Map.of(
+                                "type", "string",
+                                "description", "The UUID of the job. Found in the 'id' field of previous 'semantic_search' results. NEVER ask the user for this."
+                        ),
                         "motivation_text", Map.of("type", "string", "description", "Why the user is a good fit")
                 )
         ));
@@ -178,9 +187,14 @@ public class TextGenerationService {
                 - INITIAL GREETING: When the conversation starts, briefly state that you can help search for jobs, provide details, and submit applications.
                 - SEARCH RESULTS: When you find jobs, provide a VERY brief (1-sentence) friendly summary. Do NOT list the jobs in text; the UI will display them as cards automatically.
                 When presenting multiple options, use a bulleted list for clarity in text, and contrast them briefly (e.g., 'One is in Thessaloniki, the other is Remote'). Always end with a clear call-to-action question."
+                - JOB IDs: You have access to the 'job_id' (UUID) from the 'semantic_search' results.\s
+                NEVER ask the user for a job ID. You must look it up in your conversation history.
+                RELIANCE ON HISTORY: When a user refers to 'the second one' or a job mentioned earlier, scan the ENTIRE conversation history for the UUID. Do not re-run a search unless the user explicitly asks for new results
                 - APPLYING:\s
                     * Never apply without a 'motivation_text' from the user.\s
-                    * Use the exact UUID provided in the search results for the 'job_id'.
+                    * Use the exact UUID provided in the search results for the 'job_id'. 
+                    * If a user says "I want to apply for [Job Name]", search your history for that job's ID.
+                    * If you have the ID but no motivation, ask ONLY for the motivation text.
                     * If an application fails, explain the error simply to the user.
                 - TONE: Be encouraging and professional, but keep your text bubbles concise to avoid cluttering the UI.
         """;

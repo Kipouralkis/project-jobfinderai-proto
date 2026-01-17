@@ -1,0 +1,117 @@
+.job-details-container {
+    padding: 32px;
+    max-width: 800px;
+    margin: 0 auto;
+
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 16px;
+
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+}
+
+.job-title {
+    margin-bottom: 8px;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #222;
+}
+
+.job-meta {
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+    color: #666;
+}
+
+.job-seniority {
+    margin-bottom: 16px;
+    font-weight: 500;
+    color: #444;
+}
+
+.job-description {
+    margin-bottom: 24px;
+    line-height: 1.7;
+    color: #333;
+}
+
+.apply-button {
+    padding: 14px 24px;
+    border-radius: 12px;
+
+    background: var(--brand-primary);
+    color: white;
+
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
+
+    transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.apply-button:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+}
+
+
+.job-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Card shell */
+.job-card {
+    padding: 24px;
+    background: #fff;
+
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 16px;
+
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.job-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+
+/* Title + link */
+.job-card-title {
+    margin-bottom: 8px;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.job-card-link {
+    color: #222;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.job-card-link:hover {
+    color: var(--brand-primary);
+}
+
+/* Meta info */
+.job-card-meta {
+    color: #666;
+    margin-bottom: 12px;
+    font-size: 0.95rem;
+}
+
+/* Description */
+.job-card-description {
+    color: #333;
+    margin-bottom: 16px;
+    line-height: 1.6;
+}
+
+/* Score */
+.job-card-score {
+    color: #888;
+    font-size: 0.85rem;
+}

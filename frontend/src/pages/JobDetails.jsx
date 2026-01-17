@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { getJob } from "../api/jobs";
-import { useNavigate } from "react-router-dom";
+import JobDetailsCard from "../components/jobs/JobDetailsCard";
 
 export default function JobDetails() {
     const { id } = useParams();
@@ -18,18 +18,5 @@ export default function JobDetails() {
 
     if (!job) return <p>Loading...</p>;
 
-    return (
-        <div style={{ padding: "24px" }}>
-            <h1>{job.title}</h1>
-            <p>{job.company} — {job.location}</p>
-            <p><strong>Seniority:</strong> {job.seniority}</p>
-            <p>{job.description}</p>
-
-            <button
-                onClick={handleApply}
-                style={{ marginTop: "20px" }}>
-                Apply to this job
-            </button>
-        </div>
-    );
+    return <JobDetailsCard job={job} onApply={handleApply} />;
 }

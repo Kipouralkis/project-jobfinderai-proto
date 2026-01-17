@@ -1,26 +1,29 @@
 import { useState } from "react";
-import ChatCard from "../components/ChatCard.jsx";
+import {CHAT_BASE} from "../api/config.js";
+import "../components/chat/chat.css";
+import ChatMessage from "../components/chat/ChatMessage.jsx";
+import ChatInput from "../components/chat/ChatInput.jsx";
 
 export default function ChatPage() {
-    const [messages, setMessages] = useState([]);
+    const [messages, setMessages] = useState([
+        {role: "assistant",
+        content: "Hello! I'm your AI Job Assistant. I can help you search for roles, summarize details, and submit applications. What are you looking for today?"}
+    ]);
+
     const [input, setInput] = useState("");
 
     async function sendMessage() {
         if (!input.trim()) return;
 
         const userMsg = { role: "user", content: input };
-
-        // 1. Prepare the full history to send to the AI
-        // We include the current messages PLUS the one the user just typed
         const historyPayload = [...messages, userMsg];
 
-        // 2. Update UI immediately for a responsive feel
         setMessages(prev => [...prev, userMsg]);
         const currentInput = input;
         setInput("");
 
         try {
-            const res = await fetch("http://localhost:8081/chat", {
+            const res = await fetch(`${CHAT_BASE}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -43,118 +46,18 @@ export default function ChatPage() {
             console.error("Failed to connect to backend:", error);
         }
     }
-
     return (
-        <div style={styles.container}>
-            <h2 style={styles.header}>Job Finder Assistant</h2>
+        <div className="chat-container">
+            <h2 className="chat-header">Job Finder Assistant</h2>
 
-            <div style={styles.chatWindow}>
-                {messages.map((msg, i) => {
-                    const isUser = msg.role === "user";
-
-                    return (
-                        <div key={i} style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: isUser ? "flex-end" : "flex-start",
-                            marginBottom: "20px",
-                            width: "100%"
-                        }}>
-                            {/* AI Text Bubble: Adds the "flavor" and personality */}
-                            {msg.content && (
-                                <div style={{
-                                    ...styles.message,
-                                    background: isUser ? "#4a6cf7" : "#f0f2f5",
-                                    color: isUser ? "white" : "#333",
-                                    borderRadius: "15px",
-                                    padding: "12px 16px",
-                                    maxWidth: "80%",
-                                    lineHeight: "1.5",
-                                    boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
-                                }}>
-                                    {msg.content}
-                                </div>
-                            )}
-
-                            {/* Structured Job Cards: The "functional" part of the response */}
-                            {msg.jobs && msg.jobs.length > 0 && (
-                                <div style={{
-                                    display: "grid",
-                                    gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-                                    gap: "12px",
-                                    width: "100%",
-                                    marginTop: "12px",
-                                    paddingLeft: isUser ? "0" : "10px"
-                                }}>
-                                    {msg.jobs.map(job => (
-                                        <ChatCard key={job.id} job={job} />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-
+            <div className="chat-window">
+                {messages.map((msg, i) => (
+                    <ChatMessage key={i} msg={msg} />
+                    ))}
             </div>
 
-            <div style={styles.inputRow}>
-                <input
-                    style={styles.input}
-                    value={input}
-                    onChange={e => setInput(e.target.value)}
-                    placeholder="Ask me about jobs…"
-                />
-                <button style={styles.button} onClick={sendMessage}>
-                    Send
-                </button>
-            </div>
+            <ChatInput input={input} setInput={setInput} onSend={sendMessage} />
         </div>
+
     );
 }
-
-const styles = {
-    container: {
-        padding: 30,
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh"
-    },
-    header: {
-        marginBottom: 20
-    },
-    chatWindow: {
-        flex: 1,
-        overflowY: "auto",
-        display: "flex",
-        flexDirection: "column",
-        gap: 10,
-        padding: 10,
-        border: "1px solid #ddd",
-        borderRadius: 8,
-        background: "#fafafa"
-    },
-    message: {
-        maxWidth: "70%",
-        padding: "10px 14px",
-        borderRadius: 12,
-        whiteSpace: "pre-wrap"
-    },
-    inputRow: {
-        display: "flex",
-        gap: 10,
-        marginTop: 20
-    },
-    input: {
-        flex: 1,
-        padding: 12,
-        borderRadius: 8,
-        border: "1px solid #ccc"
-    },
-    button: {
-        padding: "12px 20px",
-        borderRadius: 8,
-        background: "#4a6cf7",
-        color: "white",
-        border: "none"
-    }
-};

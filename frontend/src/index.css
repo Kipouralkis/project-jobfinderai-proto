@@ -3,12 +3,14 @@
     --brand-primary-dark: #0b807e;
     --brand-primary-light: #a7f3f0;
 
-    --brand-bg: #f7fafc;
+    --brand-bg: linear-gradient(135deg, #f7f9fc, #b7e7e7);
     --brand-text: #1e293b;
     --brand-muted: #64748b;
 
     --radius: 8px;
     --space: 24px;
+
+    --card-border: var(--brand-primary-light);
 }
 
 /* Reset */
@@ -107,4 +109,54 @@ textarea {
 
 .hero p {
     color: var(--brand-muted);
+}
+
+.page-container {
+    max-width: 1024px;
+    margin: 0 auto;
+    padding: 32px 20px;
+}
+
+
+.section {
+    margin-bottom: 50px;
+}
+
+.assistant-concave {
+    position: fixed;
+    bottom: -200px;
+    right: -130px;
+
+    width: 700px;
+    height: 700px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    cursor: pointer;
+    z-index: 999;
+
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.assistant-concave:hover {
+    transform: translateY(-3px);
+    filter: brightness(1.05);
+}
+
+.assistant-concave-svg {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    color: var(--brand-primary);
+}
+
+.assistant-label {
+    position: relative;
+    z-index: 2;
+    color: white;
+    font-weight: 600;
+    font-size: 16px;
+    pointer-events: none;
 }
